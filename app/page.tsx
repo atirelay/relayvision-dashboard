@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import Image from "next/image";
 
 const modules = [
   "Dashboard",
@@ -44,10 +45,27 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#0B0F14] text-white flex">
       <aside className="w-72 bg-[#0F1720] border-r border-white/10 flex flex-col">
-        <div className="p-6 border-b border-white/10">
-          <div className="text-2xl font-bold tracking-wide">RelayVision</div>
-          <div className="text-sm text-blue-400 mt-1">AI Workflow Intelligence</div>
+      <div className="p-6 border-b border-white/10">
+      <div className="flex items-center gap-3">
+        <Image
+          src="/logo.png"
+          alt="RelayVision"
+          width={42}
+          height={42}
+          priority
+        />
+
+        <div>
+          <div className="text-xl font-bold tracking-wide">
+            RelayVision
+          </div>
+
+          <div className="text-xs text-blue-400">
+            AI Workflow Intelligence
+          </div>
         </div>
+      </div>
+    </div>
 
         <nav className="p-4 space-y-1">
           {modules.map((module) => (
