@@ -44,7 +44,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#0B0F14] text-white flex">
-      <aside className="w-72 bg-[#0F1720] border-r border-white/10 flex flex-col">
+      <aside className="w-80 bg-[#0F1720] border-r border-white/10 flex flex-col">
       <div className="p-2 border-b border-white/10">
         <Image
           src="/relayvision_sidebar_header.png"
