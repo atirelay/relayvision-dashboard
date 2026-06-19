@@ -18,6 +18,7 @@ const modules = [
 export default function Home() {
   const [runs, setRuns] = useState<any[]>([]);
   const [activeModule, setActiveModule] = useState("Dashboard");
+  const [selectedRun, setSelectedRun] = useState<any | null>(null);
 
   useEffect(() => {
     loadRuns();
@@ -45,22 +46,25 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#0B0F14] text-white flex">
       <aside className="w-80 bg-[#0F1720] border-r border-white/10 flex flex-col">
-      <div className="p-2 border-b border-white/10">
-        <Image
-          src="/relayvision_sidebar_header.png"
-          alt="RelayVision"
-          width={1200}
-          height={300}
-          priority
-          className="w-full h-auto object-contain"
-        />
-      </div>
+        <div className="p-2 border-b border-white/10">
+          <Image
+            src="/relayvision_sidebar_header.png"
+            alt="RelayVision"
+            width={1200}
+            height={300}
+            priority
+            className="w-full h-auto object-contain"
+          />
+        </div>
 
         <nav className="p-4 space-y-1">
           {modules.map((module) => (
             <button
               key={module}
-              onClick={() => setActiveModule(module)}
+              onClick={() => {
+                setActiveModule(module);
+                setSelectedRun(null);
+              }}
               className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition ${
                 activeModule === module
                   ? "bg-blue-600 text-white"
@@ -102,14 +106,14 @@ export default function Home() {
               </div>
 
               <Panel title="Recent Workflow Runs">
-                <RunsTable runs={runs.slice(0, 10)} />
+                <RunsTable runs={runs.slice(0, 10)} onSelectRun={setSelectedRun} />
               </Panel>
             </>
           )}
 
           {activeModule === "Workflow Runs" && (
             <Panel title="Workflow Run History">
-              <RunsTable runs={runs} />
+              <RunsTable runs={runs} onSelectRun={setSelectedRun} />
             </Panel>
           )}
 
@@ -118,6 +122,10 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {selectedRun && (
+        <RunDetailPanel run={selectedRun} onClose={() => setSelectedRun(null)} />
+      )}
     </main>
   );
 }
@@ -142,7 +150,13 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function RunsTable({ runs }: { runs: any[] }) {
+function RunsTable({
+  runs,
+  onSelectRun,
+}: {
+  runs: any[];
+  onSelectRun: (run: any) => void;
+}) {
   return (
     <table className="w-full text-sm">
       <thead>
@@ -159,7 +173,11 @@ function RunsTable({ runs }: { runs: any[] }) {
 
       <tbody>
         {runs.map((run) => (
-          <tr key={run.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+          <tr
+            key={run.id}
+            onClick={() => onSelectRun(run)}
+            className="border-b border-white/5 hover:bg-white/[0.05] cursor-pointer transition"
+          >
             <td className="py-4 font-medium">{run.workflow_name}</td>
             <td className="text-zinc-300">{run.industry || "General"}</td>
             <td className="text-zinc-300">{run.operator_name || "Unknown"}</td>
@@ -173,6 +191,68 @@ function RunsTable({ runs }: { runs: any[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function RunDetailPanel({
+  run,
+  onClose,
+}: {
+  run: any;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-y-0 right-0 w-[420px] bg-[#0F1720] border-l border-white/10 shadow-2xl z-50">
+      <div className="h-20 border-b border-white/10 flex items-center justify-between px-6">
+        <div>
+          <h2 className="text-lg font-semibold">Workflow Run Details</h2>
+          <p className="text-xs text-zinc-400">Run ID: {run.id}</p>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="text-zinc-400 hover:text-white text-sm"
+        >
+          Close
+        </button>
+      </div>
+
+      <div className="p-6 space-y-5">
+        <DetailBlock label="Workflow" value={run.workflow_name} />
+        <DetailBlock label="Industry" value={run.industry || "General"} />
+        <DetailBlock label="Description" value={run.description || "No description provided."} />
+        <DetailBlock label="Version" value={run.version || "1.0"} />
+        <DetailBlock label="Operator" value={run.operator_name || "Unknown"} />
+        <DetailBlock label="Device" value={run.device_name || "Unknown"} />
+        <DetailBlock label="Total Time" value={`${run.total_time || 0} seconds`} />
+        <DetailBlock label="Coaching Events" value={`${run.coaching_events || 0}`} />
+        <DetailBlock label="Missing Events" value={`${run.missing_events || 0}`} />
+        <DetailBlock
+          label="Timestamp"
+          value={run.timestamp ? new Date(run.timestamp).toLocaleString() : "-"}
+        />
+
+        <div className="pt-4 border-t border-white/10">
+          <h3 className="text-sm font-semibold mb-2">Run Summary</h3>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            RelayVision verified this workflow run and synchronized the result to
+            the cloud dashboard. Future versions will include step-by-step timing,
+            PDF reports, screenshots, evidence images, and action recognition results.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
+        {label}
+      </div>
+      <div className="text-sm text-white">{value}</div>
+    </div>
   );
 }
 
