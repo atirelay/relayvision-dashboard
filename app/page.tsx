@@ -18,6 +18,7 @@ const modules = [
 export default function Home() {
   const [runs, setRuns] = useState<any[]>([]);
   const [workflows, setWorkflows] = useState<any[]>([]);
+  const [devices, setDevices] = useState<any[]>([]);
   const [activeModule, setActiveModule] = useState("Dashboard");
   const [selectedRun, setSelectedRun] = useState<any | null>(null);
 
@@ -27,9 +28,14 @@ export default function Home() {
   const [version, setVersion] = useState("1.0");
   const [steps, setSteps] = useState<string[]>([""]);
 
+  const [deviceName, setDeviceName] = useState("");
+  const [deviceType, setDeviceType] = useState("Camera");
+  const [deviceLocation, setDeviceLocation] = useState("");
+
   useEffect(() => {
     loadRuns();
     loadWorkflows();
+    loadDevices();
   }, []);
 
   async function loadRuns() {
@@ -48,6 +54,41 @@ export default function Home() {
       .order("created_at", { ascending: false });
 
     if (!error) setWorkflows(data || []);
+  }
+
+  async function loadDevices() {
+    const { data, error } = await supabase
+      .from("devices")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error) setDevices(data || []);
+  }
+
+  async function saveDevice() {
+    if (!deviceName.trim()) {
+      alert("Device name required");
+      return;
+    }
+
+    const { error } = await supabase.from("devices").insert([
+      {
+        name: deviceName,
+        device_type: deviceType,
+        location: deviceLocation,
+        status: "offline",
+      },
+    ]);
+
+    if (error) {
+      console.error(error);
+      alert("Error creating device");
+      return;
+    }
+
+    setDeviceName("");
+    setDeviceLocation("");
+    loadDevices();
   }
 
   async function saveWorkflow() {
@@ -224,9 +265,23 @@ export default function Home() {
             />
           )}
 
+          {activeModule === "Devices" && (
+            <DevicesManager
+              devices={devices}
+              deviceName={deviceName}
+              setDeviceName={setDeviceName}
+              deviceType={deviceType}
+              setDeviceType={setDeviceType}
+              deviceLocation={deviceLocation}
+              setDeviceLocation={setDeviceLocation}
+              saveDevice={saveDevice}
+            />
+          )}
+
           {activeModule !== "Dashboard" &&
             activeModule !== "Workflow Runs" &&
-            activeModule !== "Workflow Manager" && (
+            activeModule !== "Workflow Manager" &&
+            activeModule !== "Devices" && (
               <PlaceholderModule title={activeModule} />
             )}
         </div>
@@ -452,6 +507,94 @@ function WorkflowManager({
   );
 }
 
+function DevicesManager({
+  devices,
+  deviceName,
+  setDeviceName,
+  deviceType,
+  setDeviceType,
+  deviceLocation,
+  setDeviceLocation,
+  saveDevice,
+}: any) {
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <div className="bg-[#111827] border border-white/10 rounded-xl p-6">
+        <h2 className="text-xl font-semibold mb-1">Register Device</h2>
+        <p className="text-sm text-zinc-400 mb-6">
+          Add cameras, wearables, mobile devices, and edge processors to the
+          RelayVision cloud platform.
+        </p>
+
+        <div className="space-y-4">
+          <input
+            className="w-full bg-[#0F1720] border border-white/10 rounded-lg p-3 text-sm outline-none focus:border-blue-500"
+            placeholder="Device Name"
+            value={deviceName}
+            onChange={(e) => setDeviceName(e.target.value)}
+          />
+
+          <input
+            className="w-full bg-[#0F1720] border border-white/10 rounded-lg p-3 text-sm outline-none focus:border-blue-500"
+            placeholder="Location"
+            value={deviceLocation}
+            onChange={(e) => setDeviceLocation(e.target.value)}
+          />
+
+          <select
+            className="w-full bg-[#0F1720] border border-white/10 rounded-lg p-3 text-sm outline-none focus:border-blue-500"
+            value={deviceType}
+            onChange={(e) => setDeviceType(e.target.value)}
+          >
+            <option>Camera</option>
+            <option>Wearable</option>
+            <option>Mobile Device</option>
+            <option>Edge Processor</option>
+          </select>
+
+          <button
+            onClick={saveDevice}
+            className="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg font-medium"
+          >
+            Register Device
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-[#111827] border border-white/10 rounded-xl p-6">
+        <h2 className="text-xl font-semibold mb-1">Registered Devices</h2>
+        <p className="text-sm text-zinc-400 mb-6">
+          Devices saved in Supabase and ready for workflow assignment.
+        </p>
+
+        <div className="space-y-3">
+          {devices.length === 0 && (
+            <div className="text-sm text-zinc-500 border border-white/10 rounded-lg p-4">
+              No devices registered yet.
+            </div>
+          )}
+
+          {devices.map((device: any) => (
+            <div
+              key={device.id}
+              className="border border-white/10 rounded-lg p-4 hover:bg-white/[0.03]"
+            >
+              <div className="font-medium">{device.name}</div>
+              <div className="text-sm text-zinc-400 mt-1">
+                {device.device_type || "Camera"} •{" "}
+                {device.location || "No location"}
+              </div>
+              <div className="text-xs text-blue-400 mt-2">
+                Status: {device.status || "offline"}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RunDetailPanel({
   run,
   onClose,
@@ -467,7 +610,10 @@ function RunDetailPanel({
           <p className="text-xs text-zinc-400">Run ID: {run.id}</p>
         </div>
 
-        <button onClick={onClose} className="text-zinc-400 hover:text-white text-sm">
+        <button
+          onClick={onClose}
+          className="text-zinc-400 hover:text-white text-sm"
+        >
           Close
         </button>
       </div>
@@ -482,7 +628,10 @@ function RunDetailPanel({
         <DetailBlock label="Version" value={run.version || "1.0"} />
         <DetailBlock label="Operator" value={run.operator_name || "Unknown"} />
         <DetailBlock label="Device" value={run.device_name || "Unknown"} />
-        <DetailBlock label="Total Time" value={`${run.total_time || 0} seconds`} />
+        <DetailBlock
+          label="Total Time"
+          value={`${run.total_time || 0} seconds`}
+        />
         <DetailBlock
           label="Coaching Events"
           value={`${run.coaching_events || 0}`}
